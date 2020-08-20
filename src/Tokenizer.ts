@@ -21,6 +21,7 @@ const enum State {
     InAttributeValueDq, // "
     InAttributeValueSq, // '
     InAttributeValueNq,
+    InAttributeValueCurly, // {
 
     //declarations
     BeforeDeclaration, // !
@@ -250,6 +251,7 @@ export default class Tokenizer {
     _cbs: Callbacks;
     _xmlMode: boolean;
     _decodeEntities: boolean;
+    _curlyBracesInAttributes: boolean;
 
     constructor(
         options: { xmlMode?: boolean; decodeEntities?: boolean, curlyBracesInAttributes?: boolean } | null,
@@ -258,6 +260,7 @@ export default class Tokenizer {
         this._cbs = cbs;
         this._xmlMode = !!(options && options.xmlMode);
         this._decodeEntities = !!(options && options.decodeEntities);
+        this._curlyBracesInAttributes = !!(options && options.curlyBracesInAttributes);
     }
 
     reset() {
@@ -416,6 +419,9 @@ export default class Tokenizer {
         } else if (c === "'") {
             this._state = State.InAttributeValueSq;
             this._sectionStart = this._index + 1;
+        } else if (c === '{') {
+            this._state = State.InAttributeValueCurly;
+            this._sectionStart = this._index + 1;
         } else if (!whitespace(c)) {
             this._state = State.InAttributeValueNq;
             this._sectionStart = this._index;
@@ -444,6 +450,13 @@ export default class Tokenizer {
             this._baseState = this._state;
             this._state = State.BeforeEntity;
             this._sectionStart = this._index;
+        }
+    }
+    _stateInAttributeValueCurlyBraces(c: string) {
+        if (c === '}') {
+            this._emitToken("onattribdata");
+            this._cbs.onattribend();
+            this._state = State.BeforeAttributeName;
         }
     }
     _stateInAttributeValueNoQuotes(c: string) {
@@ -752,6 +765,8 @@ export default class Tokenizer {
                 this._stateAfterAttributeName(c);
             } else if (this._state === State.InAttributeValueSq) {
                 this._stateInAttributeValueSingleQuotes(c);
+            } else if (this._state === State.InAttributeValueCurly) {
+                this._stateInAttributeValueCurlyBraces(c);
             } else if (this._state === State.BeforeAttributeValue) {
                 this._stateBeforeAttributeValue(c);
             } else if (this._state === State.BeforeClosingTagName) {

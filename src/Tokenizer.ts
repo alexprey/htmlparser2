@@ -252,7 +252,7 @@ export default class Tokenizer {
     _decodeEntities: boolean;
 
     constructor(
-        options: { xmlMode?: boolean; decodeEntities?: boolean } | null,
+        options: { xmlMode?: boolean; decodeEntities?: boolean, curlyBracesInAttributes?: boolean } | null,
         cbs: Callbacks
     ) {
         this._cbs = cbs;

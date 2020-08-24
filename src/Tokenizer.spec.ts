@@ -164,4 +164,169 @@ describe('Tokenizer', () => {
         tokenizer.reset();
         logger.log = [];
     });
+
+    test('should support attributes', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false
+        }, logger);
+
+        const input = '<div width=100></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'width'",
+            "onattribdata: '100'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
+
+    test('should support double quoted attributes', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false
+        }, logger);
+
+        const input = '<div title="title attribute text"></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'title'",
+            "onattribdata: 'title attribute text'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
+
+    test('should support single quoted attributes', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false
+        }, logger);
+
+        const input = '<div title=\'title attribute text\'></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'title'",
+            "onattribdata: 'title attribute text'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
+
+    test('should support curly braced attributes', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false,
+            curlyBracesInAttributes: true
+        }, logger);
+
+        const input = '<div on:click={() => handleClick()}></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'on:click'",
+            "onattribdata: '() => handleClick()'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
+
+    test('should support curly braced attributes with escaping in JS strings', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false,
+            curlyBracesInAttributes: true
+        }, logger);
+
+        const input = '<div on:click={() => console.log(\'}\' + "} \\"}" + `}`)}></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'on:click'",
+            "onattribdata: '() => console.log('}' + \"} \\\"}\" + `}`)'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
+
+    test('should support curly braced attributes with escaping by inline JS comments', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false,
+            curlyBracesInAttributes: true
+        }, logger);
+
+        const input = '<div on:click={() => console.log("c") /* } */}></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'on:click'",
+            "onattribdata: '() => console.log(\"c\") /* } */'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
+
+    test('should support curly braced attributes with nesting scopes', () => {
+        const logger = new CallbackLogger();
+        const tokenizer = new Tokenizer({
+            xmlMode: false,
+            decodeEntities: false,
+            curlyBracesInAttributes: true
+        }, logger);
+
+        const input = '<div styles={{ width: 100, height: 200 }}></div>';
+        const expectedOutput = [
+            "onopentagname: 'div'",
+            "onattribname: 'styles'",
+            "onattribdata: '{ width: 100, height: 200 }'",
+            'onattribend',
+            'onopentagend',
+            "onclosetag: 'div'",
+            'onend'
+        ];
+
+        tokenizer.write(input);
+        tokenizer.end();
+        expect(logger.log).toEqual(expectedOutput);
+    });
 });

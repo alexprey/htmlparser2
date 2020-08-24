@@ -434,7 +434,7 @@ export default class Tokenizer {
         } else if (c === "'") {
             this._state = State.InAttributeValueSq;
             this._sectionStart = this._index + 1;
-        } else if (c === '{') {
+        } else if (this._curlyBracesInAttributes && c === '{') {
             this._state = State.InAttributeValueCurly;
             this._sectionStart = this._index + 1;
             this._jsStateStack = [];

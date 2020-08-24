@@ -1,23 +1,30 @@
 # htmlparser2
 
-[![NPM version](http://img.shields.io/npm/v/htmlparser2.svg?style=flat)](https://npmjs.org/package/htmlparser2)
-[![Downloads](https://img.shields.io/npm/dm/htmlparser2.svg?style=flat)](https://npmjs.org/package/htmlparser2)
-[![Build Status](http://img.shields.io/travis/fb55/htmlparser2/master.svg?style=flat)](http://travis-ci.org/fb55/htmlparser2)
-[![Coverage](http://img.shields.io/coveralls/fb55/htmlparser2.svg?style=flat)](https://coveralls.io/r/fb55/htmlparser2)
+[![NPM version](http://img.shields.io/npm/v/htmlparser2-svelte.svg?style=flat)](https://npmjs.org/package/htmlparser2-svelte)
+![Build Status](https://github.com/alexprey/htmlparser2/workflows/Node.js%20CI/badge.svg)
 
-A forgiving HTML/XML/RSS parser.
+A forgiving HTML/Svelte/XML/RSS parser.
 The parser can handle streams and provides a callback interface.
+
+Extended version of [htmlparser2](https://github.com/fb55/htmlparser2) with Svelte syntax feature supporting, enabled by new options.
+
+## Additional features
+
+- Support of JS expressions in tag attributes
+```html
+<button type="button" on:click={() => handleButtonClick()}>
+    Click to say hello
+</button>
+```
 
 ## Installation
 
-    npm install htmlparser2
-
-A live demo of htmlparser2 is available [here](https://astexplorer.net/#/2AmVrGuGVJ).
+    npm install htmlparser2-svelte
 
 ## Usage
 
 ```javascript
-const htmlparser2 = require("htmlparser2");
+const htmlparser2 = require("htmlparser2-svelte");
 const parser = new htmlparser2.Parser(
     {
         onopentag(name, attribs) {
@@ -56,7 +63,7 @@ That's it?!
 While the `Parser` interface closely resembles Node.js streams, it's not a 100% match. Use the `WritableStream` interface to process a streaming input:
 
 ```javascript
-const htmlparser2 = require("htmlparser2");
+const htmlparser2 = require("htmlparser2-svelte");
 const parserStream = new htmlparser2.WritableStream(
     {
         ontext(text) {
@@ -87,6 +94,26 @@ const feed = htmlparser2.parseFeed(content, options);
 ```
 
 Note: While the provided feed handler works for most feeds, you might want to use [danmactough/node-feedparser](https://github.com/danmactough/node-feedparser), which is much better tested and actively maintained.
+
+## Parsing Svelte HTML
+
+```javascript
+const htmlparser2 = require("htmlparser2-svelte");
+const parserStream = new htmlparser2.WritableStream(
+    {
+        ontext(text) {
+            console.log("Streaming:", text);
+        },
+    },
+    { 
+        decodeEntities: true,
+        curlyBracesInAttributes: true,
+    }
+);
+
+const htmlStream = getHtmlStreamFromSomewhere();
+htmlStream.pipe(parserStream).on("finish", () => console.log("done"));
+```
 
 ## Performance
 

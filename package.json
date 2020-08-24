@@ -1,8 +1,11 @@
 {
-    "name": "htmlparser2",
-    "description": "Fast & forgiving HTML/XML/RSS parser",
+    "name": "htmlparser2-svelte",
+    "description": "Fast & forgiving HTML/Svelte/XML/RSS parser",
     "version": "4.1.0",
-    "author": "Felix Boehm <me@feedic.com>",
+    "author": "Alexey Mulyukin <alexprey@yandex.ru>",
+    "contributors": [
+        "Felix Boehm <me@feedic.com>"
+    ],
     "sideEffects": false,
     "keywords": [
         "html",
@@ -12,11 +15,12 @@
         "dom",
         "rss",
         "feed",
-        "atom"
+        "atom",
+        "svelte"
     ],
     "repository": {
         "type": "git",
-        "url": "git://github.com/fb55/htmlparser2.git"
+        "url": "https://github.com/alexprey/htmlparser2.git"
     },
     "directories": {
         "lib": "lib/"

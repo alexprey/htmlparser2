@@ -266,11 +266,11 @@ describe('Tokenizer', () => {
             curlyBracesInAttributes: true
         }, logger);
 
-        const input = '<div on:click={() => console.log(\'}\' + "}" + `}`)}></div>';
+        const input = '<div on:click={() => console.log(\'}\' + "} \\"}" + `}`)}></div>';
         const expectedOutput = [
             "onopentagname: 'div'",
             "onattribname: 'on:click'",
-            "onattribdata: '() => console.log(\'}\' + \"}\" + `}`)'",
+            "onattribdata: '() => console.log('}' + \"} \\\"}\" + `}`)'",
             'onattribend',
             'onopentagend',
             "onclosetag: 'div'",
@@ -317,7 +317,7 @@ describe('Tokenizer', () => {
         const input = '<div styles={{ width: 100, height: 200 }}></div>';
         const expectedOutput = [
             "onopentagname: 'div'",
-            "onattribname: 'on:click'",
+            "onattribname: 'styles'",
             "onattribdata: '{ width: 100, height: 200 }'",
             'onattribend',
             'onopentagend',

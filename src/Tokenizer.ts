@@ -23,6 +23,17 @@ const enum State {
     InAttributeValueNq,
     InAttributeValueCurly, // {
 
+    // JS related
+    InJsStringDq, // "
+    InJsStringSq, // '
+    InJsStringInterpolation, // `
+    InJsStringInterpolationPlaceholderSign, // $
+    InJsStringInterpolationPlaceholderInner, // {
+    InJsEscape, // \
+    BeforeJsInlineComment1, // /
+    AfterJsInlineComment1, // *
+    InJsInlineComment, // /*
+
     //declarations
     BeforeDeclaration, // !
     InDeclaration,
@@ -248,6 +259,9 @@ export default class Tokenizer {
     /** Indicates whether the tokenizer has finished running / `.end` has been called. */
     _ended = false;
 
+    /** JS State stack which used for JSBlock behaviour when `_curlyBracesInAttributes` option are enabled. */
+    _jsStateStack: Array<State> = [];
+
     _cbs: Callbacks;
     _xmlMode: boolean;
     _decodeEntities: boolean;
@@ -273,6 +287,7 @@ export default class Tokenizer {
         this._special = Special.None;
         this._running = true;
         this._ended = false;
+        this._jsStateStack = [];
     }
 
     _stateText(c: string) {
@@ -422,6 +437,7 @@ export default class Tokenizer {
         } else if (c === '{') {
             this._state = State.InAttributeValueCurly;
             this._sectionStart = this._index + 1;
+            this._jsStateStack = [];
         } else if (!whitespace(c)) {
             this._state = State.InAttributeValueNq;
             this._sectionStart = this._index;
@@ -452,13 +468,120 @@ export default class Tokenizer {
             this._sectionStart = this._index;
         }
     }
+    
     _stateInAttributeValueCurlyBraces(c: string) {
-        if (c === '}') {
-            this._emitToken("onattribdata");
-            this._cbs.onattribend();
-            this._state = State.BeforeAttributeName;
+        if (c === '{') {
+            this._jsStateStack.push(this._state);
+            this._state = State.InAttributeValueCurly;
+        } else if (c === '"') {
+            this._jsStateStack.push(this._state);
+            this._state = State.InJsStringDq;
+        } else if (c === "'") {
+            this._jsStateStack.push(this._state);
+            this._state = State.InJsStringSq;
+        } else if (c === '`') {
+            this._jsStateStack.push(this._state);
+            this._state = State.InJsStringInterpolation;
+        } else if (c === '/') {
+            this._jsStateStack.push(this._state);
+            this._state = State.BeforeJsInlineComment1;
+        } else if (c === '}') {
+            if (this._jsStateStack.length === 0) {
+                this._emitToken("onattribdata");
+                this._cbs.onattribend();
+                this._state = State.BeforeAttributeName;
+            } else {
+                const previousState = this._jsStateStack.pop();
+                if (previousState) {
+                    this._state = previousState;
+                }
+            }
         }
     }
+
+    _stateBeforeJsInlineComment1(c: string) {
+        if (c === '*') {
+            this._state = State.InJsInlineComment;
+        } else {
+            const previousState = this._jsStateStack.pop();
+            if (previousState) {
+                this._state = previousState;
+            }
+        }
+    }
+
+    _stateInJsInlineComment(c: string) {
+        if (c === '*') {
+            this._state = State.AfterJsInlineComment1;
+        }
+    }
+
+    _stateAfterJsInlineComment1(c: string) {
+        if (c === '/') {
+            const previousState = this._jsStateStack.pop();
+            if (previousState) {
+                this._state = previousState;
+            }
+        } else {
+            this._state = State.InJsInlineComment;
+        }
+    }
+
+    _stateInJsEscape() {
+        const previousState = this._jsStateStack.pop();
+        if (previousState) {
+            this._state = previousState;
+        }
+    }
+
+    _stateInJsStringDq(c: string) {
+        if (c === '"') {
+            const previousState = this._jsStateStack.pop();
+            if (previousState) {
+                this._state = previousState;
+            }
+        } else if (c === '\\') {
+            this._jsStateStack.push(this._state);
+            this._state = State.InJsEscape;
+        }
+    }
+
+    _stateInJsStringSq(c: string) {
+        if (c === "'") {
+            const previousState = this._jsStateStack.pop();
+            if (previousState) {
+                this._state = previousState;
+            }
+        } else if (c === '\\') {
+            this._jsStateStack.push(this._state);
+            this._state = State.InJsEscape;
+        }
+    }
+
+    _stateInJsStringInterpolation(c: string) {
+        if (c === '`') {
+            const previousState = this._jsStateStack.pop();
+            if (previousState) {
+                this._state = previousState;
+            }
+        } else if (c === '$') {
+            this._state = State.InJsStringInterpolationPlaceholderSign;
+        }
+    }
+
+    _stateInJsStringInterpolationPlaceholderSign(c: string) {
+        if (c === '{') {
+            this._jsStateStack.push(State.InJsStringInterpolation);
+            this._state = State.InJsStringInterpolationPlaceholderInner;
+        } else {
+            this._state = State.InJsStringInterpolation;
+        }
+    }
+
+    _stateInJsStringInterpolationPlaceholderInner(c: string) {
+        this._stateInAttributeValueCurlyBraces(c);
+    }
+
     _stateInAttributeValueNoQuotes(c: string) {
         if (whitespace(c) || c === ">") {
             this._emitToken("onattribdata");
@@ -767,6 +890,24 @@ export default class Tokenizer {
                 this._stateInAttributeValueSingleQuotes(c);
             } else if (this._state === State.InAttributeValueCurly) {
                 this._stateInAttributeValueCurlyBraces(c);
+            } else if (this._state === State.InJsEscape) {
+                this._stateInJsEscape();
+            } else if (this._state === State.InJsStringDq) {
+                this._stateInJsStringDq(c);
+            } else if (this._state === State.InJsStringSq) {
+                this._stateInJsStringSq(c);
+            } else if (this._state === State.InJsStringInterpolation) {
+                this._stateInJsStringInterpolation(c);
+            } else if (this._state === State.InJsStringInterpolationPlaceholderSign) {
+                this._stateInJsStringInterpolationPlaceholderSign(c);
+            } else if (this._state === State.InJsStringInterpolationPlaceholderInner) {
+                this._stateInJsStringInterpolationPlaceholderInner(c);
+            } else if (this._state === State.BeforeJsInlineComment1) {
+                this._stateBeforeJsInlineComment1(c);
+            } else if (this._state === State.InJsInlineComment) {
+                this._stateInJsInlineComment(c);
+            } else if (this._state === State.AfterJsInlineComment1) {
+                this._stateAfterJsInlineComment1(c);
             } else if (this._state === State.BeforeAttributeValue) {
                 this._stateBeforeAttributeValue(c);
             } else if (this._state === State.BeforeClosingTagName) {

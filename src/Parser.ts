@@ -135,6 +135,15 @@ export interface ParserOptions {
      */
     recognizeSelfClosing?: boolean;
 
+    /***
+     * If set to `true`, enable parsing of curly braces in attributes that used in Svelte markup
+     * @example
+     * <button type="button" on:click={() => handleButtonClick()}>
+     *  Click me
+     * </button>
+     */
+    curlyBracesInAttributes?: boolean;
+
     /**
      * Allows the default tokenizer to be overwritten.
      */
